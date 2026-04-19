@@ -1,10 +1,11 @@
 // Sermon view — video player top-left, notes below, Bible panel on right.
 
-function SermonView({ sermon, onBack, onUpdateSermon }) {
+function SermonView({ sermon: initialSermon, onBack, onUpdateSermon }) {
+  const [sermon, setSermon] = React.useState(initialSermon);
   const [currentT, setCurrentT] = React.useState(0);
   const [playing, setPlaying] = React.useState(false);
-  const [duration, setDuration] = React.useState(sermon.durationSec || 0);
-  const [notes, setNotes] = React.useState(sermon.notes);
+  const [duration, setDuration] = React.useState(initialSermon.durationSec || 0);
+  const [notes, setNotes] = React.useState(initialSermon.notes);
   const [draft, setDraft] = React.useState("");
   const [rightTab, setRightTab] = React.useState("bible");
   const [bibleLookup, setBibleLookup] = React.useState(null);
@@ -12,9 +13,32 @@ function SermonView({ sermon, onBack, onUpdateSermon }) {
   const [bibleLoading, setBibleLoading] = React.useState(false);
   const [recentRefs, setRecentRefs] = React.useState([]);
   const [popover, setPopover] = React.useState(null);
+  const [editOpen, setEditOpen] = React.useState(false);
 
   const videoRef = React.useRef(null);
   const draftRef = React.useRef(null);
+
+  function saveSermonMeta(updated) {
+    setSermon(updated);
+    onUpdateSermon && onUpdateSermon(updated);
+  }
+
+  function exportNotes() {
+    if (!notes.length) return;
+    const lines = [`# ${sermon.title}`, `${sermon.speaker} · ${sermon.date}`];
+    if (sermon.series) lines.push(`*${sermon.series}*`);
+    lines.push("", "---", "", "## Notes", "");
+    for (const n of [...notes].sort((a, b) => a.t - b.t)) {
+      lines.push(`**${fmtTime(n.t)}**${n.starred ? " ★" : ""} — ${n.text}`, "");
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = sermon.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + "-notes.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // Collect Bible refs from notes asynchronously
   React.useEffect(() => {
@@ -34,35 +58,34 @@ function SermonView({ sermon, onBack, onUpdateSermon }) {
   function handleDurationReady(d) {
     setDuration(d);
     if (d && sermon.durationSec !== d) {
-      onUpdateSermon && onUpdateSermon({ ...sermon, durationSec: d, duration: fmtTime(d) });
+      const updated = { ...sermon, durationSec: d, duration: fmtTime(d) };
+      setSermon(updated);
+      onUpdateSermon && onUpdateSermon(updated);
     }
+  }
+
+  function saveNotes(next) {
+    setNotes(next);
+    onUpdateSermon && onUpdateSermon({ ...sermon, notes: next });
   }
 
   function addNote() {
     if (!draft.trim()) return;
     const n = { id: "n" + Date.now(), t: Math.floor(currentT), text: draft.trim() };
-    const next = [...notes, n].sort((a, b) => a.t - b.t);
-    setNotes(next);
+    saveNotes([...notes, n].sort((a, b) => a.t - b.t));
     setDraft("");
-    onUpdateSermon && onUpdateSermon({ ...sermon, notes: next });
   }
 
   function toggleStar(id) {
-    const next = notes.map(n => n.id === id ? { ...n, starred: !n.starred } : n);
-    setNotes(next);
-    onUpdateSermon && onUpdateSermon({ ...sermon, notes: next });
+    saveNotes(notes.map(n => n.id === id ? { ...n, starred: !n.starred } : n));
   }
 
   function editNote(id, text) {
-    const next = notes.map(n => n.id === id ? { ...n, text } : n);
-    setNotes(next);
-    onUpdateSermon && onUpdateSermon({ ...sermon, notes: next });
+    saveNotes(notes.map(n => n.id === id ? { ...n, text } : n));
   }
 
   function deleteNote(id) {
-    const next = notes.filter(n => n.id !== id);
-    setNotes(next);
-    onUpdateSermon && onUpdateSermon({ ...sermon, notes: next });
+    saveNotes(notes.filter(n => n.id !== id));
   }
 
   // Async ref hover — fetches passage from API if not in local cache
@@ -110,8 +133,19 @@ function SermonView({ sermon, onBack, onUpdateSermon }) {
           <span>{sermon.speaker}</span>
           <span className="dot">·</span>
           <span>{sermon.date}</span>
+          <button className="sv-edit-btn" onClick={() => setEditOpen(true)} title="Edit sermon details">
+            <Icon name="edit" size={12}/> Edit
+          </button>
         </div>
       </header>
+
+      {editOpen && (
+        <EditSermonModal
+          sermon={sermon}
+          onSave={saveSermonMeta}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
 
       <div className="sv-main">
         {/* LEFT: video + notes */}
@@ -141,6 +175,7 @@ function SermonView({ sermon, onBack, onUpdateSermon }) {
             onDelete={deleteNote}
             onRefHover={handleRefHover}
             onRefLeave={handleRefLeave}
+            onExport={exportNotes}
             draftRef={draftRef}
           />
         </div>

@@ -2,7 +2,7 @@
 
 // ---------------- NOTES PANEL ----------------
 
-function NotesPanel({ notes, currentT, draft, setDraft, onAdd, onSeek, onStar, onEdit, onDelete, onRefHover, onRefLeave, draftRef }) {
+function NotesPanel({ notes, currentT, draft, setDraft, onAdd, onSeek, onStar, onEdit, onDelete, onRefHover, onRefLeave, onExport, draftRef }) {
   const [editingId, setEditingId] = React.useState(null);
   const [editText, setEditText] = React.useState("");
 
@@ -15,7 +15,6 @@ function NotesPanel({ notes, currentT, draft, setDraft, onAdd, onSeek, onStar, o
     setEditingId(null);
   }
 
-  // Group notes by rough "section" — same minute buckets feel paper-like.
   return (
     <section className="np">
       <div className="np-head">
@@ -23,8 +22,18 @@ function NotesPanel({ notes, currentT, draft, setDraft, onAdd, onSeek, onStar, o
           <h3>Margin notes</h3>
           <span className="np-count">{notes.length}</span>
         </div>
-        <div className="np-head-hint">
-          <Icon name="book" size={12}/> Type a verse like <em>John 3:16</em> for an inline preview
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            className="np-export-btn"
+            onClick={onExport}
+            disabled={!notes.length}
+            title="Export notes as Markdown"
+          >
+            <Icon name="download" size={11}/> Export
+          </button>
+          <div className="np-head-hint">
+            <Icon name="book" size={12}/> Type a verse like <em>John 3:16</em> for an inline preview
+          </div>
         </div>
       </div>
 
@@ -256,4 +265,78 @@ function RefPopover({ passage, loading, x, y }) {
   );
 }
 
-Object.assign(window, { NotesPanel, BiblePanel, PassageBlock, OutlinePanel, RefPopover });
+// ---------------- EDIT SERMON MODAL ----------------
+
+function EditSermonModal({ sermon, onSave, onClose }) {
+  const [title, setTitle] = React.useState(sermon.title);
+  const [speaker, setSpeaker] = React.useState(sermon.speaker);
+  const [series, setSeries] = React.useState(sermon.series);
+  const [date, setDate] = React.useState(sermon.date);
+
+  function save() {
+    if (!title.trim()) return;
+    onSave({ ...sermon, title: title.trim(), speaker: speaker.trim(), series: series.trim(), date: date.trim() });
+    onClose();
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <div className="modal-title"><Icon name="edit" size={17}/> Edit sermon</div>
+          <button className="modal-close" onClick={onClose}><Icon name="x" size={16}/></button>
+        </div>
+        <div className="modal-body">
+          <div className="edit-form">
+            <div className="edit-form-field">
+              <label className="modal-label">Title</label>
+              <input className="edit-form-input" value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && save()} autoFocus/>
+            </div>
+            <div className="edit-form-row">
+              <div className="edit-form-field">
+                <label className="modal-label">Speaker</label>
+                <input className="edit-form-input" value={speaker} onChange={e => setSpeaker(e.target.value)}/>
+              </div>
+              <div className="edit-form-field">
+                <label className="modal-label">Date</label>
+                <input className="edit-form-input" value={date} onChange={e => setDate(e.target.value)}/>
+              </div>
+            </div>
+            <div className="edit-form-field">
+              <label className="modal-label">Series</label>
+              <input className="edit-form-input" value={series} onChange={e => setSeries(e.target.value)}/>
+            </div>
+          </div>
+        </div>
+        <div className="modal-foot">
+          <button className="btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={save} disabled={!title.trim()}>Save changes</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- CONFIRM MODAL ----------------
+
+function ConfirmModal({ title, message, confirmLabel = "Delete", onConfirm, onClose }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <div className="modal-title">{title}</div>
+          <button className="modal-close" onClick={onClose}><Icon name="x" size={16}/></button>
+        </div>
+        <div className="confirm-body">{message}</div>
+        <div className="modal-foot">
+          <button className="btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={() => { onConfirm(); onClose(); }} style={{ background: "var(--accent)" }}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { NotesPanel, BiblePanel, PassageBlock, OutlinePanel, RefPopover, EditSermonModal, ConfirmModal });

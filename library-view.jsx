@@ -1,8 +1,11 @@
 // Library view — the landing page. Lists sermons; paste-URL modal for YouTube import.
 
-function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
+function LibraryView({ sermons, onOpen, onImport, onEdit, onDelete, onImportLibrary, theme, setTheme }) {
   const [query, setQuery] = React.useState("");
   const [importOpen, setImportOpen] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState(null);
+  const [deleteTarget, setDeleteTarget] = React.useState(null);
+  const importLibInputRef = React.useRef(null);
 
   const filtered = sermons.filter(s => {
     const q = query.toLowerCase();
@@ -10,6 +13,32 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
            s.speaker.toLowerCase().includes(q) ||
            s.series.toLowerCase().includes(q);
   });
+
+  function exportLibrary() {
+    const blob = new Blob([JSON.stringify(sermons, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "marginalia-library.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportLibFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const data = JSON.parse(evt.target.result);
+        if (Array.isArray(data)) onImportLibrary(data);
+      } catch {
+        // silently ignore invalid JSON
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
 
   return (
     <div className="library">
@@ -55,7 +84,13 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
 
       <div className="lib-grid">
         {filtered.map(s => (
-          <SermonCard key={s.id} sermon={s} onClick={() => onOpen(s)} />
+          <SermonCard
+            key={s.id}
+            sermon={s}
+            onClick={() => onOpen(s)}
+            onEdit={e => { e.stopPropagation(); setEditTarget(s); }}
+            onDelete={e => { e.stopPropagation(); setDeleteTarget(s); }}
+          />
         ))}
         <button className="lib-card lib-card--add" onClick={() => setImportOpen(true)}>
           <div className="lib-card-add-inner">
@@ -70,6 +105,21 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
         <span>Marginalia — a quiet place for Sunday notes.</span>
         <span className="lib-foot-sep">·</span>
         <span>WEB translation, public domain</span>
+        <div className="lib-foot-data">
+          <button className="lib-foot-data-btn" onClick={exportLibrary} title="Download all sermons and notes as JSON">
+            <Icon name="download" size={11}/> Export library
+          </button>
+          <button className="lib-foot-data-btn" onClick={() => importLibInputRef.current?.click()} title="Restore from a previously exported JSON file">
+            <Icon name="upload" size={11}/> Import library
+          </button>
+          <input
+            ref={importLibInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: "none" }}
+            onChange={handleImportLibFile}
+          />
+        </div>
       </footer>
 
       {importOpen && (
@@ -78,11 +128,29 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
           onImport={(data) => { onImport(data); setImportOpen(false); }}
         />
       )}
+
+      {editTarget && (
+        <EditSermonModal
+          sermon={editTarget}
+          onSave={updated => { onEdit(updated); setEditTarget(null); }}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title={<><Icon name="trash" size={16}/> Delete sermon</>}
+          message={<>Delete <strong>"{deleteTarget.title}"</strong>? This will also remove all {deleteTarget.notes.length} note{deleteTarget.notes.length !== 1 ? "s" : ""}. This cannot be undone.</>}
+          confirmLabel="Delete"
+          onConfirm={() => onDelete(deleteTarget.id)}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }
 
-function SermonCard({ sermon, onClick }) {
+function SermonCard({ sermon, onClick, onEdit, onDelete }) {
   const thumbStyle = sermon.thumbUrl
     ? { backgroundImage: `url(${sermon.thumbUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
     : { background: sermon.thumbColor || "#8B6F47" };
@@ -93,6 +161,14 @@ function SermonCard({ sermon, onClick }) {
         <div className="lib-card-thumb-tape">{sermon.series}</div>
         <div className="lib-card-thumb-title">{sermon.title}</div>
         <div className="lib-card-thumb-dur">{sermon.duration}</div>
+        <div className="lib-card-actions">
+          <button className="lib-card-action" onClick={onEdit} title="Edit sermon details">
+            <Icon name="edit" size={12}/>
+          </button>
+          <button className="lib-card-action lib-card-action--danger" onClick={onDelete} title="Delete sermon">
+            <Icon name="trash" size={12}/>
+          </button>
+        </div>
       </div>
       <div className="lib-card-body">
         <div className="lib-card-speaker">{sermon.speaker}</div>
