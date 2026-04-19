@@ -36,10 +36,7 @@ function startServer(appDir) {
 }
 
 async function createWindow() {
-  const appDir = app.isPackaged
-    ? path.dirname(process.execPath)  // next to the .exe
-    : __dirname
-
+  const appDir = app.getAppPath()
   const port = await startServer(appDir)
 
   const win = new BrowserWindow({
