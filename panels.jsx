@@ -115,7 +115,7 @@ function NotesPanel({ notes, currentT, draft, setDraft, onAdd, onSeek, onStar, o
 
 // ---------------- BIBLE PANEL ----------------
 
-function BiblePanel({ query, onQueryChange, lookup, recentRefs }) {
+function BiblePanel({ query, onQueryChange, lookup, loading, recentRefs }) {
   const suggestions = [
     "John 3:16", "Romans 8:28", "Psalm 23:1-4", "Matthew 5:3-10",
     "Philippians 4:6-7", "Ephesians 2:8-10", "1 Corinthians 13:4-7",
@@ -140,7 +140,11 @@ function BiblePanel({ query, onQueryChange, lookup, recentRefs }) {
         />
       </div>
 
-      {lookup ? (
+      {loading ? (
+        <div className="bp-miss" style={{ fontStyle: "italic", color: "var(--ink-faint)" }}>
+          Looking up passage…
+        </div>
+      ) : lookup ? (
         <PassageBlock passage={lookup} emphasized/>
       ) : query ? (
         <div className="bp-miss">
@@ -231,16 +235,23 @@ function OutlinePanel({ sermon, currentT, onJump }) {
 
 // ---------------- REF POPOVER ----------------
 
-function RefPopover({ passage, x, y }) {
-  // Clamp x within viewport
+function RefPopover({ passage, loading, x, y }) {
   const w = 340;
   const px = Math.max(12, Math.min(window.innerWidth - w - 12, x - w / 2));
   return (
     <div className="ref-pop" style={{ left: px, top: y - 12, width: w, transform: "translateY(-100%)" }}>
       <div className="ref-pop-arrow" style={{ left: x - px }}/>
-      <div className="ref-pop-ref">{passage.ref}</div>
-      <div className="ref-pop-text">{passage.text}</div>
-      <div className="ref-pop-ver">{passage.version}</div>
+      {loading ? (
+        <div className="ref-pop-text" style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>
+          Looking up…
+        </div>
+      ) : passage ? (
+        <>
+          <div className="ref-pop-ref">{passage.ref}</div>
+          <div className="ref-pop-text">{passage.text}</div>
+          <div className="ref-pop-ver">{passage.version}</div>
+        </>
+      ) : null}
     </div>
   );
 }

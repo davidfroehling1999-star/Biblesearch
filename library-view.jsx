@@ -83,9 +83,13 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
 }
 
 function SermonCard({ sermon, onClick }) {
+  const thumbStyle = sermon.thumbUrl
+    ? { backgroundImage: `url(${sermon.thumbUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { background: sermon.thumbColor || "#8B6F47" };
+
   return (
     <button className="lib-card" onClick={onClick}>
-      <div className="lib-card-thumb" style={{ background: sermon.thumbColor }}>
+      <div className="lib-card-thumb" style={thumbStyle}>
         <div className="lib-card-thumb-tape">{sermon.series}</div>
         <div className="lib-card-thumb-title">{sermon.title}</div>
         <div className="lib-card-thumb-dur">{sermon.duration}</div>
@@ -118,32 +122,42 @@ function ImportModal({ onClose, onImport }) {
     return null;
   }
 
-  function submit() {
+  async function submit() {
     setError("");
     const id = parseYouTubeId(url);
     if (!id) { setError("Hmm — that doesn't look like a YouTube link."); return; }
     setParsing(true);
-    // Simulate import
-    setTimeout(() => {
+
+    try {
+      const resp = await fetch(
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`
+      );
+      if (!resp.ok) throw new Error("not found");
+      const meta = await resp.json();
+
       onImport({
         id: "imported-" + Date.now(),
-        title: "Imported Sermon",
-        speaker: "New speaker",
+        title: meta.title || "Imported Sermon",
+        speaker: meta.author_name || "Unknown Speaker",
         series: "Imported",
         date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
         duration: "—",
-        durationSec: 1800,
+        durationSec: 0,
         youtubeId: id,
-        thumbColor: "#8B6F47",
+        thumbUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+        thumbColor: null,
         outline: [
           { t: 0, label: "Opening" },
           { t: 300, label: "Scripture reading" },
           { t: 900, label: "Main point" },
-          { t: 1500, label: "Application" }
+          { t: 1500, label: "Application" },
         ],
-        notes: []
+        notes: [],
       });
-    }, 800);
+    } catch {
+      setError("Couldn't load video info — check the URL and try again.");
+      setParsing(false);
+    }
   }
 
   return (
@@ -170,7 +184,7 @@ function ImportModal({ onClose, onImport }) {
           {error && <div className="modal-err">{error}</div>}
           <div className="modal-hint">
             Works with watch URLs, <code>youtu.be</code> short links, and embeds.
-            We'll pull the title and length after you confirm.
+            We'll pull the title and channel name automatically.
           </div>
         </div>
         <div className="modal-foot">

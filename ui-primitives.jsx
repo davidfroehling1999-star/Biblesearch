@@ -53,12 +53,11 @@ function AnnotatedText({ text, onRefHover, onRefLeave }) {
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
     const [full, book, ch, vs, ve] = m;
-    const passage = lookupPassage(book, ch, vs, ve);
     parts.push(
       <span
         key={idx++}
-        className={"bible-ref" + (passage ? "" : " bible-ref--unknown")}
-        onMouseEnter={(e) => passage && onRefHover && onRefHover(passage, e.currentTarget)}
+        className="bible-ref"
+        onMouseEnter={(e) => onRefHover && onRefHover(book, ch, vs, ve, e.currentTarget)}
         onMouseLeave={() => onRefLeave && onRefLeave()}
       >{full}</span>
     );

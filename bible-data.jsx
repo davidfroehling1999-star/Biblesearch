@@ -144,4 +144,32 @@ function lookupPassage(book, chapter, vStart, vEnd) {
   return BIBLE_PASSAGES[range] || BIBLE_PASSAGES[single] || null;
 }
 
-Object.assign(window, { BIBLE_PASSAGES, BIBLE_BOOKS, BIBLE_REF_REGEX, lookupPassage });
+const _apiCache = {};
+
+async function lookupPassageAsync(book, chapter, vStart, vEnd) {
+  const local = lookupPassage(book, chapter, vStart, vEnd);
+  if (local) return local;
+
+  const ref = vEnd ? `${book} ${chapter}:${vStart}-${vEnd}` : `${book} ${chapter}:${vStart}`;
+  const key = ref.toLowerCase();
+  if (key in _apiCache) return _apiCache[key];
+
+  try {
+    const r = await fetch(`https://bible-api.com/${encodeURIComponent(ref)}?translation=web`);
+    if (!r.ok) { _apiCache[key] = null; return null; }
+    const d = await r.json();
+    if (d.error) { _apiCache[key] = null; return null; }
+    const text = d.text.trim().split("\n")
+      .map(line => line.replace(/^\d+\s*/, "").trim())
+      .filter(Boolean).join(" ");
+    const passage = { ref: d.reference, text, version: "WEB" };
+    _apiCache[key] = passage;
+    BIBLE_PASSAGES[key] = passage;
+    return passage;
+  } catch {
+    _apiCache[key] = null;
+    return null;
+  }
+}
+
+Object.assign(window, { BIBLE_PASSAGES, BIBLE_BOOKS, BIBLE_REF_REGEX, lookupPassage, lookupPassageAsync });
