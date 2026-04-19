@@ -1,8 +1,11 @@
 // Library view — the landing page. Lists sermons; paste-URL modal for YouTube import.
 
-function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
+function LibraryView({ sermons, onOpen, onImport, onEdit, onDelete, onImportLibrary, theme, setTheme }) {
   const [query, setQuery] = React.useState("");
   const [importOpen, setImportOpen] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState(null);
+  const [deleteTarget, setDeleteTarget] = React.useState(null);
+  const importLibInputRef = React.useRef(null);
 
   const filtered = sermons.filter(s => {
     const q = query.toLowerCase();
@@ -10,6 +13,32 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
            s.speaker.toLowerCase().includes(q) ||
            s.series.toLowerCase().includes(q);
   });
+
+  function exportLibrary() {
+    const blob = new Blob([JSON.stringify(sermons, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "marginalia-library.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportLibFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const data = JSON.parse(evt.target.result);
+        if (Array.isArray(data)) onImportLibrary(data);
+      } catch {
+        // silently ignore invalid JSON
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
 
   return (
     <div className="library">
@@ -55,7 +84,13 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
 
       <div className="lib-grid">
         {filtered.map(s => (
-          <SermonCard key={s.id} sermon={s} onClick={() => onOpen(s)} />
+          <SermonCard
+            key={s.id}
+            sermon={s}
+            onClick={() => onOpen(s)}
+            onEdit={e => { e.stopPropagation(); setEditTarget(s); }}
+            onDelete={e => { e.stopPropagation(); setDeleteTarget(s); }}
+          />
         ))}
         <button className="lib-card lib-card--add" onClick={() => setImportOpen(true)}>
           <div className="lib-card-add-inner">
@@ -70,6 +105,21 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
         <span>Marginalia — a quiet place for Sunday notes.</span>
         <span className="lib-foot-sep">·</span>
         <span>WEB translation, public domain</span>
+        <div className="lib-foot-data">
+          <button className="lib-foot-data-btn" onClick={exportLibrary} title="Download all sermons and notes as JSON">
+            <Icon name="download" size={11}/> Export library
+          </button>
+          <button className="lib-foot-data-btn" onClick={() => importLibInputRef.current?.click()} title="Restore from a previously exported JSON file">
+            <Icon name="upload" size={11}/> Import library
+          </button>
+          <input
+            ref={importLibInputRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: "none" }}
+            onChange={handleImportLibFile}
+          />
+        </div>
       </footer>
 
       {importOpen && (
@@ -78,17 +128,47 @@ function LibraryView({ sermons, onOpen, onImport, theme, setTheme }) {
           onImport={(data) => { onImport(data); setImportOpen(false); }}
         />
       )}
+
+      {editTarget && (
+        <EditSermonModal
+          sermon={editTarget}
+          onSave={updated => { onEdit(updated); setEditTarget(null); }}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmModal
+          title={<><Icon name="trash" size={16}/> Delete sermon</>}
+          message={<>Delete <strong>"{deleteTarget.title}"</strong>? This will also remove all {deleteTarget.notes.length} note{deleteTarget.notes.length !== 1 ? "s" : ""}. This cannot be undone.</>}
+          confirmLabel="Delete"
+          onConfirm={() => onDelete(deleteTarget.id)}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }
 
-function SermonCard({ sermon, onClick }) {
+function SermonCard({ sermon, onClick, onEdit, onDelete }) {
+  const thumbStyle = sermon.thumbUrl
+    ? { backgroundImage: `url(${sermon.thumbUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { background: sermon.thumbColor || "#8B6F47" };
+
   return (
     <button className="lib-card" onClick={onClick}>
-      <div className="lib-card-thumb" style={{ background: sermon.thumbColor }}>
+      <div className="lib-card-thumb" style={thumbStyle}>
         <div className="lib-card-thumb-tape">{sermon.series}</div>
         <div className="lib-card-thumb-title">{sermon.title}</div>
         <div className="lib-card-thumb-dur">{sermon.duration}</div>
+        <div className="lib-card-actions">
+          <button className="lib-card-action" onClick={onEdit} title="Edit sermon details">
+            <Icon name="edit" size={12}/>
+          </button>
+          <button className="lib-card-action lib-card-action--danger" onClick={onDelete} title="Delete sermon">
+            <Icon name="trash" size={12}/>
+          </button>
+        </div>
       </div>
       <div className="lib-card-body">
         <div className="lib-card-speaker">{sermon.speaker}</div>
@@ -118,32 +198,42 @@ function ImportModal({ onClose, onImport }) {
     return null;
   }
 
-  function submit() {
+  async function submit() {
     setError("");
     const id = parseYouTubeId(url);
     if (!id) { setError("Hmm — that doesn't look like a YouTube link."); return; }
     setParsing(true);
-    // Simulate import
-    setTimeout(() => {
+
+    try {
+      const resp = await fetch(
+        `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`
+      );
+      if (!resp.ok) throw new Error("not found");
+      const meta = await resp.json();
+
       onImport({
         id: "imported-" + Date.now(),
-        title: "Imported Sermon",
-        speaker: "New speaker",
+        title: meta.title || "Imported Sermon",
+        speaker: meta.author_name || "Unknown Speaker",
         series: "Imported",
         date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
         duration: "—",
-        durationSec: 1800,
+        durationSec: 0,
         youtubeId: id,
-        thumbColor: "#8B6F47",
+        thumbUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+        thumbColor: null,
         outline: [
           { t: 0, label: "Opening" },
           { t: 300, label: "Scripture reading" },
           { t: 900, label: "Main point" },
-          { t: 1500, label: "Application" }
+          { t: 1500, label: "Application" },
         ],
-        notes: []
+        notes: [],
       });
-    }, 800);
+    } catch {
+      setError("Couldn't load video info — check the URL and try again.");
+      setParsing(false);
+    }
   }
 
   return (
@@ -170,7 +260,7 @@ function ImportModal({ onClose, onImport }) {
           {error && <div className="modal-err">{error}</div>}
           <div className="modal-hint">
             Works with watch URLs, <code>youtu.be</code> short links, and embeds.
-            We'll pull the title and length after you confirm.
+            We'll pull the title and channel name automatically.
           </div>
         </div>
         <div className="modal-foot">

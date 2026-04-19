@@ -1487,6 +1487,139 @@ body::before {
 }
 
 /* ==========================================================================
+   CARD ACTIONS (edit / delete on hover)
+   ========================================================================== */
+
+.lib-card-thumb { position: relative; }
+
+.lib-card-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.lib-card:hover .lib-card-actions { opacity: 1; }
+
+.lib-card-action {
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+  display: grid;
+  place-items: center;
+  transition: background 0.15s;
+}
+.lib-card-action:hover { background: rgba(0, 0, 0, 0.75); }
+.lib-card-action--danger:hover { background: rgba(160, 40, 30, 0.8); }
+
+/* ==========================================================================
+   LIBRARY FOOTER DATA BUTTONS
+   ========================================================================== */
+
+.lib-foot { flex-wrap: wrap; align-items: center; }
+
+.lib-foot-data {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+.lib-foot-data-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--rule-soft);
+  transition: color 0.15s, border-color 0.15s;
+}
+.lib-foot-data-btn:hover { color: var(--ink-dim); border-color: var(--rule); }
+
+/* ==========================================================================
+   EDIT SERMON FORM
+   ========================================================================== */
+
+.edit-form { display: flex; flex-direction: column; gap: 14px; }
+.edit-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.edit-form-field { display: flex; flex-direction: column; gap: 5px; }
+.edit-form-input {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper-sunk);
+  border: 1px solid var(--rule);
+  padding: 10px 12px;
+  border-radius: 2px;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.edit-form-input:focus { border-color: var(--accent); outline: none; }
+
+/* ==========================================================================
+   CONFIRM MODAL
+   ========================================================================== */
+
+.confirm-body {
+  padding: 20px 24px 24px;
+  font-family: var(--font-body-serif);
+  font-size: 16px;
+  color: var(--ink-dim);
+  line-height: 1.5;
+}
+.confirm-body strong { color: var(--ink); font-weight: 500; }
+
+/* ==========================================================================
+   NOTES EXPORT BUTTON
+   ========================================================================== */
+
+.np-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--rule-soft);
+  background: transparent;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.np-export-btn:hover { color: var(--accent); border-color: var(--accent-soft); }
+.np-export-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ==========================================================================
+   SERMON VIEW EDIT BUTTON
+   ========================================================================== */
+
+.sv-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--rule-soft);
+  transition: color 0.15s, border-color 0.15s;
+}
+.sv-edit-btn:hover { color: var(--ink-dim); border-color: var(--rule); }
+
+/* ==========================================================================
    RESPONSIVE
    ========================================================================== */
 @media (max-width: 1100px) {
