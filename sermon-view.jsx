@@ -292,8 +292,6 @@ const VideoPlayer = React.forwardRef(function VideoPlayer(
         iv_load_policy: 3,
         fs: 0,
         disablekb: 1,
-        // Only pass origin when served over HTTP; file:// returns "null" which breaks the embed
-        ...(location.protocol !== "file:" && { origin: location.origin }),
       },
       events: {
         onReady(e) {
