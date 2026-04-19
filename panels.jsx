@@ -194,53 +194,6 @@ function PassageBlock({ passage, emphasized }) {
   );
 }
 
-// ---------------- OUTLINE PANEL ----------------
-
-function OutlinePanel({ sermon, currentT, onJump }) {
-  const activeIdx = (() => {
-    let idx = -1;
-    for (let i = 0; i < sermon.outline.length; i++) {
-      if (sermon.outline[i].t <= currentT) idx = i;
-    }
-    return idx;
-  })();
-
-  return (
-    <div className="op">
-      <div className="op-head">
-        <div className="op-title">
-          <span className="op-title-main">Auto-outline</span>
-          <span className="op-title-sub"><Icon name="sparkle" size={11}/> Generated from transcript</span>
-        </div>
-      </div>
-
-      <ol className="op-list">
-        {sermon.outline.map((o, i) => {
-          const isActive = i === activeIdx;
-          return (
-            <li
-              key={i}
-              className={"op-item" + (isActive ? " active" : "") + (i < activeIdx ? " past" : "")}
-              onClick={() => onJump(o.t)}
-            >
-              <div className="op-item-rail">
-                <div className="op-item-dot"/>
-              </div>
-              <div className="op-item-body">
-                <div className="op-item-time">{fmtTime(o.t)}</div>
-                <div className="op-item-label">{o.label}</div>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className="op-foot">
-        <Icon name="sparkle" size={11}/> Click any section to jump the video.
-      </div>
-    </div>
-  );
-}
 
 // ---------------- REF POPOVER ----------------
 
@@ -339,4 +292,4 @@ function ConfirmModal({ title, message, confirmLabel = "Delete", onConfirm, onCl
   );
 }
 
-Object.assign(window, { NotesPanel, BiblePanel, PassageBlock, OutlinePanel, RefPopover, EditSermonModal, ConfirmModal });
+Object.assign(window, { NotesPanel, BiblePanel, PassageBlock, RefPopover, EditSermonModal, ConfirmModal });

@@ -7,13 +7,13 @@ function SermonView({ sermon: initialSermon, onBack, onUpdateSermon }) {
   const [duration, setDuration] = React.useState(initialSermon.durationSec || 0);
   const [notes, setNotes] = React.useState(initialSermon.notes);
   const [draft, setDraft] = React.useState("");
-  const [rightTab, setRightTab] = React.useState("bible");
   const [bibleLookup, setBibleLookup] = React.useState(null);
   const [bibleQuery, setBibleQuery] = React.useState("");
   const [bibleLoading, setBibleLoading] = React.useState(false);
   const [recentRefs, setRecentRefs] = React.useState([]);
   const [popover, setPopover] = React.useState(null);
   const [editOpen, setEditOpen] = React.useState(false);
+  const [editingTitle, setEditingTitle] = React.useState(false);
 
   const videoRef = React.useRef(null);
   const draftRef = React.useRef(null);
@@ -127,13 +127,31 @@ function SermonView({ sermon: initialSermon, onBack, onUpdateSermon }) {
         </button>
         <div className="sv-header-title">
           <div className="sv-series">{sermon.series}</div>
-          <div className="sv-title">{sermon.title}</div>
+          {editingTitle ? (
+            <input
+              className="sv-title sv-title-input"
+              defaultValue={sermon.title}
+              autoFocus
+              onBlur={e => {
+                if (e.target.value.trim()) saveSermonMeta({ ...sermon, title: e.target.value.trim() });
+                setEditingTitle(false);
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter") e.target.blur();
+                if (e.key === "Escape") setEditingTitle(false);
+              }}
+            />
+          ) : (
+            <div className="sv-title sv-title-editable" onClick={() => setEditingTitle(true)} title="Click to rename">
+              {sermon.title}
+            </div>
+          )}
         </div>
         <div className="sv-header-meta">
           <span>{sermon.speaker}</span>
           <span className="dot">·</span>
           <span>{sermon.date}</span>
-          <button className="sv-edit-btn" onClick={() => setEditOpen(true)} title="Edit sermon details">
+          <button className="sv-edit-btn" onClick={() => setEditOpen(true)} title="Edit all sermon details">
             <Icon name="edit" size={12}/> Edit
           </button>
         </div>
@@ -180,29 +198,15 @@ function SermonView({ sermon: initialSermon, onBack, onUpdateSermon }) {
           />
         </div>
 
-        {/* RIGHT: Bible / outline */}
+        {/* RIGHT: Bible reference panel */}
         <aside className="sv-right">
-          <div className="sv-right-tabs">
-            <button
-              className={"sv-tab" + (rightTab === "bible" ? " active" : "")}
-              onClick={() => setRightTab("bible")}
-            ><Icon name="book" size={13}/> Bible</button>
-            <button
-              className={"sv-tab" + (rightTab === "outline" ? " active" : "")}
-              onClick={() => setRightTab("outline")}
-            ><Icon name="outline" size={13}/> Outline</button>
-          </div>
-          {rightTab === "bible" ? (
-            <BiblePanel
-              query={bibleQuery}
-              onQueryChange={doBibleLookup}
-              lookup={bibleLookup}
-              loading={bibleLoading}
-              recentRefs={recentRefs}
-            />
-          ) : (
-            <OutlinePanel sermon={sermon} currentT={currentT} onJump={seek}/>
-          )}
+          <BiblePanel
+            query={bibleQuery}
+            onQueryChange={doBibleLookup}
+            lookup={bibleLookup}
+            loading={bibleLoading}
+            recentRefs={recentRefs}
+          />
         </aside>
       </div>
 

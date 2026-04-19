@@ -1619,6 +1619,25 @@ body::before {
 }
 .sv-edit-btn:hover { color: var(--ink-dim); border-color: var(--rule); }
 
+/* Inline title editing */
+.sv-title-editable { cursor: text; }
+.sv-title-editable:hover { color: var(--accent); }
+.sv-title-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--accent);
+  outline: none;
+  text-align: center;
+  padding: 0 0 2px;
+}
+
+/* Ref popover — cap height so long passages don't overflow screen */
+.ref-pop {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
 /* ==========================================================================
    RESPONSIVE
    ========================================================================== */
