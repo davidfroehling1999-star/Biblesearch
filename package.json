@@ -1,0 +1,40 @@
+{
+  "name": "marginalia",
+  "version": "1.0.0",
+  "description": "Sermon note-taking app with YouTube import and Bible reference",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "build:win": "electron-builder --win portable",
+    "build:linux": "electron-builder --linux AppImage",
+    "build": "electron-builder --win portable --linux AppImage"
+  },
+  "build": {
+    "appId": "com.marginalia.sermons",
+    "productName": "Marginalia",
+    "copyright": "Public domain",
+    "files": [
+      "index.html",
+      "main.js",
+      "styles.css",
+      "*.jsx",
+      "!node_modules"
+    ],
+    "win": {
+      "target": [{ "target": "portable" }],
+      "artifactName": "Marginalia-Setup.exe"
+    },
+    "linux": {
+      "target": [{ "target": "AppImage" }],
+      "artifactName": "Marginalia.AppImage",
+      "category": "Education"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.0.0"
+  }
+}
