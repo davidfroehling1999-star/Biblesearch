@@ -13,6 +13,7 @@
     "appId": "com.marginalia.sermons",
     "productName": "Marginalia",
     "copyright": "Public domain",
+    "asar": false,
     "files": [
       "index.html",
       "main.js",
